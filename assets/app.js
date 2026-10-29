@@ -15,7 +15,7 @@ function resumo(rs){const t={total:0,avaliadas:0,nc:0,suspeitas:0,semFaixa:0,som
 function linhas(){const q=canonical($('busca').value),sel=$('mes').value;return D.linhas.filter(r=>r.tipo===tipo&&(!q||canonical(r.medida).includes(q))).flatMap(r=>Object.entries(r.mesesInspecao).filter(([m])=>!sel||m===sel).map(([m,s])=>({...s,mes:m,medida:r.medida,vendido:r.mesesVendas[m]||0})));}
 function vendas(ms){const q=canonical($('busca').value);return D.linhas.filter(r=>r.tipo===tipo&&(!q||canonical(r.medida).includes(q))).reduce((a,r)=>a+ms.reduce((s,m)=>s+(r.mesesVendas[m]||0),0),0);}
 function mean(t,k){return t.avaliadas?sinal(t[k]/t.avaliadas)+' mm':'Sem base';}
-function chart(id,options){if(!chartInstances[id])chartInstances[id]=echarts.init($(id),null,{renderer:'svg'});chartInstances[id].setOption({animation:false,textStyle:{fontFamily:'Inter,Arial',fontSize:10,color:'#6c8090'},tooltip:{trigger:'axis',textStyle:{fontSize:11}},grid:{left:46,right:46,top:45,bottom:35},legend:{top:3,right:8,itemWidth:10,itemHeight:8,textStyle:{fontSize:10,color:'#60798a'}},xAxis:{type:'category',axisTick:{show:false},axisLine:{lineStyle:{color:'#dce5ec'}}},yAxis:{type:'value',splitLine:{lineStyle:{color:'#c6d2dc',type:'dashed'}}},...options},true);}
+function chart(id,options){if(window.innerWidth<=760){options.grid={...(options.grid||{left:46,right:46,top:45,bottom:35}),left:58,right:38,top:60,bottom:60};options.xAxis={...options.xAxis,axisLabel:{interval:0,rotate:40,fontSize:10}};}if(!chartInstances[id])chartInstances[id]=echarts.init($(id),null,{renderer:'svg'});chartInstances[id].setOption({animation:false,textStyle:{fontFamily:'Inter,Arial',fontSize:10,color:'#6c8090'},tooltip:{trigger:'axis',textStyle:{fontSize:11}},grid:{left:46,right:46,top:45,bottom:35},legend:{top:3,right:8,itemWidth:10,itemHeight:8,textStyle:{fontSize:10,color:'#60798a'}},xAxis:{type:'category',axisTick:{show:false},axisLine:{lineStyle:{color:'#dce5ec'}}},yAxis:{type:'value',splitLine:{lineStyle:{color:'#c6d2dc',type:'dashed'}}},...options},true);}
 function render(){const rs=linhas(),s=resumo(rs),ms=$('mes').value?[$('mes').value]:periodos(),ps=periodos(),q=$('busca').value;
 $('tituloProcesso').textContent=nomes[tipo];$('periodo').textContent=ps.length?rotulo(ps[0])+' — '+rotulo(ps.at(-1)):'';
 $('resumoPeriodo').textContent=(ms.length===1?rotulo(ms[0]):rotulo(ms[0])+' a '+rotulo(ms.at(-1)))+(q?' · medida '+q:' · todas as medidas');
@@ -66,9 +66,18 @@ $('abaVariacao').addEventListener('click',()=>{
  $('relatorio').hidden=true;$('variacao').hidden=false;
  for(const el of document.querySelectorAll('[data-tipo]')){el.setAttribute('aria-selected','false');el.tabIndex=-1;}
  $('abaVariacao').setAttribute('aria-selected','true');$('abaVariacao').tabIndex=0;
- $('processoVariacao').value=tipo;medidasVariacao();resize();
+ if(!$('medidaVariacao').options.length){medidasVariacao();}else{renderVariacao();}resize();
 });
 $('processoVariacao').addEventListener('change',medidasVariacao);
 $('medidaVariacao').addEventListener('change',renderVariacao);
 const processTabs=[$('abaNu'),$('abaEmpapelado'),$('abaVariacao')];
 for(const tab of processTabs)tab.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();e.stopImmediatePropagation();let i=processTabs.indexOf(tab);i=e.key==='Home'?0:e.key==='End'?2:(i+(e.key==='ArrowRight'?1:2))%3;processTabs[i].click();processTabs[i].focus();},true);
+// Redimensiona cada grafico a partir do tamanho real do seu painel.
+const chartSizeObserver = new ResizeObserver(entries=>{
+ for(const {target,contentRect} of entries){
+  const instance=chartInstances[target.id];
+  if(instance&&contentRect.width>0&&contentRect.height>0)instance.resize({width:contentRect.width,height:contentRect.height});
+ }
+});
+for(const el of document.querySelectorAll('.chart'))chartSizeObserver.observe(el);
+window.addEventListener('load',()=>requestAnimationFrame(resize));
