@@ -57,7 +57,12 @@ function renderVariacao(){
  const processo=$('processoVariacao').value,medida=$('medidaVariacao').value;
  const row=D.linhas.find(r=>r.tipo===processo&&r.medida===medida);
  $('tituloVariacao').textContent=nomes[processo]+' · '+medida;
- if(!row)return;
+ const semInspecoes=!row||!row.inspecoes;
+ const semAvaliaveis=!!row&&row.inspecoes>0&&!row.avaliadas;
+ $('avisoVariacao').hidden=!(semInspecoes||semAvaliaveis);
+ $('avisoVariacao').textContent=semInspecoes?'Não houve inspeção registrada para este fio.':semAvaliaveis?'Há inspeções registradas, mas as medições precisam de revisão para calcular a variação.':'';
+ $('graficoVariacao').hidden=semInspecoes||semAvaliaveis;
+ if(semInspecoes||semAvaliaveis)return;
  const keys=D.linhas.filter(r=>r.tipo===processo).flatMap(r=>Object.keys(r.mesesInspecao)).sort();
  const months=[];let m=keys[0];while(m&&m<=keys.at(-1)){months.push(m);let [y,k]=m.split('-').map(Number);if(++k>12){k=1;y++;}m=y+'-'+String(k).padStart(2,'0');}
  chart('graficoVariacao',{grid:{left:75,right:35,top:60,bottom:45},tooltip:{trigger:'axis',valueFormatter:v=>v==null?'Sem base':sinal(v,3)+' mm'},xAxis:{type:'category',data:months.map(rotulo),axisLabel:{interval:0,rotate:20}},yAxis:{type:'value',name:'Desvio médio · mm',axisLabel:{formatter:v=>n(v,3)},splitLine:{lineStyle:{color:'#c6d2dc',type:'dashed'}}},series:[['Altura','somaDesvioAltura','#385f8c'],['Largura','somaDesvioLargura','#168a80']].map(([name,key,color],i)=>({name,type:'line',connectNulls:false,symbolSize:8,lineStyle:{width:3},itemStyle:{color},label:{show:true,position:i?'bottom':'top',formatter:p=>p.value==null?'':sinal(p.value,3),fontSize:10},data:months.map(m=>{const r=row.mesesInspecao[m];return r?.avaliadas?r[key]/r.avaliadas:null;}),...(i?{}:{markLine:{silent:true,symbol:'none',label:{formatter:'Centro da faixa'},lineStyle:{color:'#6b8192',type:'dashed'},data:[{yAxis:0}]}})}))});
